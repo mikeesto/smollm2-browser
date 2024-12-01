@@ -1,5 +1,10 @@
 import { createContext, useContext, useRef, useState, useEffect } from "react";
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 const WorkerContext = createContext(null);
 
 export function useWorker() {
@@ -60,7 +65,7 @@ export function WorkerProvider({ children }) {
       worker.current?.removeEventListener("message", onMessageReceived);
   }, []);
 
-  const generate = async (prompt: string): Promise<string> => {
+  const generate = async (messages: Message[]): Promise<string> => {
     return new Promise((resolve, reject) => {
       let modelResponse = "";
 
@@ -88,7 +93,7 @@ export function WorkerProvider({ children }) {
       setIsRunning(true);
       worker.current.postMessage({
         type: "generate",
-        data: [{ role: "user", content: prompt }],
+        data: messages,
       });
     });
   };

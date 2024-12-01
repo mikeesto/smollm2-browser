@@ -29,10 +29,14 @@ const stopping_criteria = new InterruptableStoppingCriteria();
 async function generate(messages) {
   const [tokenizer, model] = await TextGenerationPipeline.getInstance();
 
+  console.log("messages", messages);
+
   const inputs = tokenizer.apply_chat_template(messages, {
     add_generation_prompt: true,
     return_dict: true,
   });
+
+  console.log("inputs", inputs);
 
   let startTime;
   let numTokens = 0;
@@ -67,9 +71,9 @@ async function generate(messages) {
     ...inputs,
 
     // Sampling
-    do_sample: true,
-    top_k: 3,
-    temperature: 0.2,
+    // do_sample: true,
+    // top_k: 3,
+    // temperature: 0.2,
 
     max_new_tokens: 1024,
     streamer,
