@@ -12,6 +12,7 @@ interface ProgressItem {
 
 interface WorkerMessage {
   type: "load" | "check" | "generate";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;
 }
 
@@ -34,7 +35,7 @@ export function useWorker() {
   return context;
 }
 
-export function WorkerProvider({ children }) {
+export function WorkerProvider({ children }: { children: React.ReactNode }) {
   const worker = useRef<Worker | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | null>(null);
   const [loadingMessage, setLoadingMessage] = useState<string>("");
@@ -49,7 +50,7 @@ export function WorkerProvider({ children }) {
       worker.current.postMessage({ type: "check" });
     }
 
-    const onMessageReceived = (e) => {
+    const onMessageReceived = (e: MessageEvent) => {
       switch (e.data.status) {
         case "loading":
           setStatus("loading");
