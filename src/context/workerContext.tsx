@@ -5,7 +5,26 @@ interface Message {
   content: string;
 }
 
-const WorkerContext = createContext(null);
+interface ProgressItem {
+  file: string;
+  progress: number;
+}
+
+interface WorkerMessage {
+  type: "load" | "check" | "generate";
+  data?: any;
+}
+
+interface WorkerContextValue {
+  status: "loading" | "ready" | null;
+  loadingMessage: string;
+  progressItems: ProgressItem[];
+  isRunning: boolean;
+  generate: (messages: Message[]) => Promise<string>;
+  sendMessage: (message: WorkerMessage) => void;
+}
+
+const WorkerContext = createContext<WorkerContextValue | null>(null);
 
 export function useWorker() {
   const context = useContext(WorkerContext);
@@ -16,11 +35,11 @@ export function useWorker() {
 }
 
 export function WorkerProvider({ children }) {
-  const worker = useRef(null);
-  const [status, setStatus] = useState(null);
-  const [loadingMessage, setLoadingMessage] = useState("");
-  const [progressItems, setProgressItems] = useState([]);
-  const [isRunning, setIsRunning] = useState(false);
+  const worker = useRef<Worker | null>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>("");
+  const [progressItems, setProgressItems] = useState<ProgressItem[]>([]);
+  const [isRunning, setIsRunning] = useState<boolean>(false);
 
   useEffect(() => {
     if (!worker.current) {
@@ -66,6 +85,10 @@ export function WorkerProvider({ children }) {
   }, []);
 
   const generate = async (messages: Message[]): Promise<string> => {
+    if (!worker.current) {
+      throw new Error("Worker not initialized");
+    }
+
     return new Promise((resolve, reject) => {
       let modelResponse = "";
 
@@ -76,33 +99,37 @@ export function WorkerProvider({ children }) {
             break;
 
           case "complete":
-            worker.current.removeEventListener("message", handleMessages);
+            worker.current?.removeEventListener("message", handleMessages);
             setIsRunning(false);
             resolve(modelResponse);
             break;
 
           case "error":
-            worker.current.removeEventListener("message", handleMessages);
+            worker.current?.removeEventListener("message", handleMessages);
             setIsRunning(false);
             reject(e.data.data);
             break;
         }
       };
 
-      worker.current.addEventListener("message", handleMessages);
+      worker.current?.addEventListener("message", handleMessages);
       setIsRunning(true);
-      worker.current.postMessage({
+      worker.current?.postMessage({
         type: "generate",
         data: messages,
       });
     });
   };
 
-  const sendMessage = (message) => {
-    worker.current?.postMessage(message);
+  const sendMessage = (message: WorkerMessage) => {
+    if (!worker.current) {
+      throw new Error("Worker not initialized");
+    }
+
+    worker.current.postMessage(message);
   };
 
-  const value = {
+  const value: WorkerContextValue = {
     status,
     loadingMessage,
     progressItems,
